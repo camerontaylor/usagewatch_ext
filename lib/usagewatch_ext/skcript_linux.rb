@@ -1,7 +1,7 @@
 module Usagewatch
   # Show the amount of total disk used in Gigabytes
-  def self.uw_diskused
-    @df = `df`
+  def self.uw_diskused(on="")
+    @df = `df #{on}`
     @parts = @df.split(" ").map { |s| s.to_i }
     @sum = 0
     for i in (9..@parts.size - 1).step(6) do
@@ -11,8 +11,8 @@ module Usagewatch
     @totaldiskused = ((@round/1024)/1024).round(2)
   end
 
-  def self.uw_diskavailable
-    df = `df -kl`
+  def self.uw_diskavailable(on="")
+    df = `df -kl #{on}`
     sum = 0.00
     df.each_line.with_index do |line, line_index|
       next if line_index.eql? 0
@@ -24,8 +24,8 @@ module Usagewatch
   end
 
   # Show the percentage of disk used.
-  def self.uw_diskused_perc
-    df = `df --total`
+  def self.uw_diskused_perc(on="")
+    df = `df --total #{on}`
     df.split(" ").last.to_f.round(2)
   end
 
@@ -120,9 +120,8 @@ module Usagewatch
       end
     end
 
-    @memstat = @result.split("\n").collect{|x| x.strip}
-    @memtotal = @memstat[0].gsub(/[^0-9]/, "")
-    @memactive = @memstat[5].gsub(/[^0-9]/, "")
+    @memtotal = @result.match(/^MemTotal:\s+(\d+)/)
+    @memactive = @result.match(/^Active:\s+(\d+)/)
     @memactivecalc = (@memactive.to_f * 100) / @memtotal.to_f
     @memusagepercentage = @memactivecalc.round
   end
