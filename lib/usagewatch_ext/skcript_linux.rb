@@ -126,6 +126,24 @@ module Usagewatch
     @memusagepercentage = @memactivecalc.round
   end
 
+  def self.uw_mem
+    if File.exists?("/proc/meminfo")
+      File.open("/proc/meminfo", "r") do |file|
+        @result = file.read
+      end
+    end
+
+    @memtotal = @result.match(/^MemTotal:\s+(\d+)/)
+    @memactive = @result.match(/^Active:\s+(\d+)/)
+    @memactivecalc = (@memactive.to_f * 100) / @memtotal.to_f
+    @memusagepercentage = @memactivecalc.round
+    {
+        total: @memtotal,
+        active: @memactive,
+        percent: @memusagepercentage
+    }
+  end
+
   # return hash of top ten proccesses by mem consumption
   # example [["apache2", 12.0], ["passenger", 13.2]]
   def self.uw_memtop
