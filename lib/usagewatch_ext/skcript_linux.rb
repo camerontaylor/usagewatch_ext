@@ -120,8 +120,8 @@ module Usagewatch
       end
     end
 
-    @memtotal = @result.match(/^MemTotal:\s+(\d+)/)
-    @memactive = @result.match(/^Active:\s+(\d+)/)
+    @memtotal = @result.match(/^MemTotal:\s+(\d+)/)[1]
+    @memactive = @result.match(/^Active:\s+(\d+)/)[1]
     @memactivecalc = (@memactive.to_f * 100) / @memtotal.to_f
     @memusagepercentage = @memactivecalc.round
   end
