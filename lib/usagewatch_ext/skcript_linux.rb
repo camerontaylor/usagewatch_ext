@@ -50,7 +50,7 @@ module Usagewatch
     @proctotal = (@proc1total - @proc0total)
 
     @cpuusage = (@procusage.to_f / @proctotal.to_f)
-    @cpuusagepercentage = (100 * @cpuusage).to_f.round(2)
+    @cpuusagepercentage = (100 * @cpuusage).to_f
   end
 
   # return hash of top ten proccesses by cpu consumption
