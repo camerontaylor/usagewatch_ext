@@ -19,7 +19,7 @@ module Usagewatch
     @totaldiskused = ((@round/1024)/1024).round(2)
   end
 
-  def self.uw_diskavailable(on="", host: proc)
+  def self.uw_diskavailable(on="", proc: "/proc")
     df = `#{with_host_proc("df -kl #{on}", proc)}`
     sum = 0.00
     df.each_line.with_index do |line, line_index|
@@ -32,7 +32,7 @@ module Usagewatch
   end
 
   # Show the percentage of disk used.
-  def self.uw_diskused_perc(on="", proc: nil)
+  def self.uw_diskused_perc(on="", proc: "/proc")
     df = `#{self.with_host_proc("df --total #{on}", proc)}`
     df.split(" ").last.to_f.round(2)
   end
