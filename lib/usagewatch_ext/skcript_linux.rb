@@ -9,7 +9,7 @@ module Usagewatch
   end
   # Show the amount of total disk used in Gigabytes
   def self.uw_diskused(on="", proc: nil)
-    @df = `#{self.with_host("df #{on}", proc)}`
+    @df = `#{self.with_host_proc("df #{on}", proc)}`
     @parts = @df.split(" ").map { |s| s.to_i }
     @sum = 0
     for i in (9..@parts.size - 1).step(6) do
@@ -20,7 +20,7 @@ module Usagewatch
   end
 
   def self.uw_diskavailable(on="", host: proc)
-    df = `#{with_host("df -kl #{on}", proc)}`
+    df = `#{with_host_proc("df -kl #{on}", proc)}`
     sum = 0.00
     df.each_line.with_index do |line, line_index|
       next if line_index.eql? 0
@@ -33,7 +33,7 @@ module Usagewatch
 
   # Show the percentage of disk used.
   def self.uw_diskused_perc(on="", proc: nil)
-    df = `#{self.with_proc("df --total #{on}", proc)}`
+    df = `#{self.with_host_proc("df --total #{on}", proc)}`
     df.split(" ").last.to_f.round(2)
   end
 
@@ -64,7 +64,7 @@ module Usagewatch
   # return hash of top ten proccesses by cpu consumption
   # example [["apache2", 12.0], ["passenger", 13.2]]
   def self.uw_cputop(proc: nil)
-    ps = `#{with_proc("ps aux | awk '{print $11, $3}' | sort -k2nr  | head -n 10", proc)}`
+    ps = `#{with_host_proc("ps aux | awk '{print $11, $3}' | sort -k2nr  | head -n 10", proc)}`
     array = []
     ps.each_line do |line|
       line = line.chomp.split(" ")
@@ -155,7 +155,7 @@ module Usagewatch
   # return hash of top ten proccesses by mem consumption
   # example [["apache2", 12.0], ["passenger", 13.2]]
   def self.uw_memtop(proc: nil)
-    ps = `#{with_proc("ps aux | awk '{print $11, $4}' | sort -k2nr  | head -n 10", proc)}`
+    ps = `#{with_host_proc("ps aux | awk '{print $11, $4}' | sort -k2nr  | head -n 10", proc)}`
     array = []
     ps.each_line do |line|
       line = line.chomp.split(" ")
