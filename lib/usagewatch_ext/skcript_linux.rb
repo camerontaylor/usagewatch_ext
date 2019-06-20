@@ -1,7 +1,15 @@
 module Usagewatch
+
+  def self.with_host_proc(command, proc_dir = "/proc")
+    if proc_dir.present? && proc_dir != "/proc"
+      "sudo nsenter --mount=#{proc_dir}/1/ns/mnt #{command}"
+    else
+      command
+    end
+  end
   # Show the amount of total disk used in Gigabytes
-  def self.uw_diskused(on="")
-    @df = `df #{on}`
+  def self.uw_diskused(on="", proc: nil)
+    @df = `#{self.with_host("df #{on}", proc)}`
     @parts = @df.split(" ").map { |s| s.to_i }
     @sum = 0
     for i in (9..@parts.size - 1).step(6) do
@@ -11,8 +19,8 @@ module Usagewatch
     @totaldiskused = ((@round/1024)/1024).round(2)
   end
 
-  def self.uw_diskavailable(on="")
-    df = `df -kl #{on}`
+  def self.uw_diskavailable(on="", host: proc)
+    df = `#{with_host("df -kl #{on}", proc)}`
     sum = 0.00
     df.each_line.with_index do |line, line_index|
       next if line_index.eql? 0
@@ -24,16 +32,16 @@ module Usagewatch
   end
 
   # Show the percentage of disk used.
-  def self.uw_diskused_perc(on="")
-    df = `df --total #{on}`
+  def self.uw_diskused_perc(on="", proc: nil)
+    df = `#{self.with_proc("df --total #{on}", proc)}`
     df.split(" ").last.to_f.round(2)
   end
 
   # Show the percentage of CPU used
-  def self.uw_cpuused
-    @proc0 = File.readlines('/proc/stat').grep(/^cpu /).first.split(" ")
+  def self.uw_cpuused(proc: "/proc")
+    @proc0 = File.readlines("#{proc}/stat").grep(/^cpu /).first.split(" ")
     sleep 1
-    @proc1 = File.readlines('/proc/stat').grep(/^cpu /).first.split(" ")
+    @proc1 = File.readlines("#{proc}/stat").grep(/^cpu /).first.split(" ")
 
     @proc0usagesum = @proc0[1].to_i + @proc0[2].to_i + @proc0[3].to_i
     @proc1usagesum = @proc1[1].to_i + @proc1[2].to_i + @proc1[3].to_i
@@ -55,8 +63,8 @@ module Usagewatch
 
   # return hash of top ten proccesses by cpu consumption
   # example [["apache2", 12.0], ["passenger", 13.2]]
-  def self.uw_cputop
-    ps = `ps aux | awk '{print $11, $3}' | sort -k2nr  | head -n 10`
+  def self.uw_cputop(proc: nil)
+    ps = `#{with_proc("ps aux | awk '{print $11, $3}' | sort -k2nr  | head -n 10", proc)}`
     array = []
     ps.each_line do |line|
       line = line.chomp.split(" ")
@@ -66,9 +74,9 @@ module Usagewatch
   end
 
   # Show the number of TCP connections used
-  def self.uw_tcpused
-    if File.exists?("/proc/net/sockstat")
-      File.open("/proc/net/sockstat", "r") do |ipv4|
+  def self.uw_tcpused(proc: "/proc")
+    if File.exists?("#{proc}/net/sockstat")
+      File.open("#{proc}/net/sockstat", "r") do |ipv4|
         @sockstat = ipv4.read
       end
 
@@ -76,8 +84,8 @@ module Usagewatch
       @tcp4count = @tcp4data[5]
     end
 
-    if  File.exists?("/proc/net/sockstat6")
-      File.open("/proc/net/sockstat6", "r") do |ipv6|
+    if  File.exists?("#{proc}/net/sockstat6")
+      File.open("#{proc}/net/sockstat6", "r") do |ipv6|
         @sockstat6 = ipv6.read
 
       end
@@ -90,9 +98,9 @@ module Usagewatch
   end
 
   # Show the number of UDP connections used
-  def self.uw_udpused
-    if File.exists?("/proc/net/sockstat")
-      File.open("/proc/net/sockstat", "r") do |ipv4|
+  def self.uw_udpused(proc: "/proc")
+    if File.exists?("#{proc}/net/sockstat")
+      File.open("#{proc}/net/sockstat", "r") do |ipv4|
         @sockstat = ipv4.read
       end
 
@@ -100,8 +108,8 @@ module Usagewatch
       @udp4count = @udp4data[16]
     end
 
-    if File.exists?("/proc/net/sockstat6")
-      File.open("/proc/net/sockstat6", "r") do |ipv6|
+    if File.exists?("#{proc}/net/sockstat6")
+      File.open("#{proc}/net/sockstat6", "r") do |ipv6|
         @sockstat6 = ipv6.read
       end
 
@@ -113,9 +121,9 @@ module Usagewatch
   end
 
   # Show the percentage of Active Memory used
-  def self.uw_memused
-    if File.exists?("/proc/meminfo")
-      File.open("/proc/meminfo", "r") do |file|
+  def self.uw_memused(proc: "/proc")
+    if File.exists?("#{proc}/meminfo")
+      File.open("#{proc}/meminfo", "r") do |file|
         @result = file.read
       end
     end
@@ -126,9 +134,9 @@ module Usagewatch
     @memusagepercentage = @memactivecalc.round
   end
 
-  def self.uw_mem
-    if File.exists?("/proc/meminfo")
-      File.open("/proc/meminfo", "r") do |file|
+  def self.uw_mem(proc: "/proc")
+    if File.exists?("#{proc}/meminfo")
+      File.open("#{proc}/meminfo", "r") do |file|
         @result = file.read
       end
     end
@@ -146,8 +154,8 @@ module Usagewatch
 
   # return hash of top ten proccesses by mem consumption
   # example [["apache2", 12.0], ["passenger", 13.2]]
-  def self.uw_memtop
-    ps = `ps aux | awk '{print $11, $4}' | sort -k2nr  | head -n 10`
+  def self.uw_memtop(proc: nil)
+    ps = `#{with_proc("ps aux | awk '{print $11, $4}' | sort -k2nr  | head -n 10", proc)}`
     array = []
     ps.each_line do |line|
       line = line.chomp.split(" ")
@@ -157,9 +165,9 @@ module Usagewatch
   end
 
   # Show the average system load of the past minute
-  def self.uw_load
-    if File.exists?("/proc/loadavg")
-      File.open("/proc/loadavg", "r") do |file|
+  def self.uw_load(proc: "/proc")
+    if File.exists?("#{proc}/loadavg")
+      File.open("#{proc}/loadavg", "r") do |file|
         @loaddata = file.read
       end
 
@@ -168,10 +176,10 @@ module Usagewatch
   end
 
   # Bandwidth Received Method
-  def self.bandrx
+  def self.bandrx(proc: "/proc")
 
-    if File.exists?("/proc/net/dev")
-      File.open("/proc/net/dev", "r") do |file|
+    if File.exists?("#{proc}/net/dev")
+      File.open("#{proc}/net/dev", "r") do |file|
         @result = file.read
       end
     end
@@ -211,11 +219,11 @@ module Usagewatch
   end
 
   # Current Bandwidth Received Calculation in Mbit/s
-  def self.uw_bandrx
+  def self.uw_bandrx(proc: "/proc")
 
-    @new0 = self.bandrx
+    @new0 = self.bandrx(proc)
     sleep 1
-    @new1 = self.bandrx
+    @new1 = self.bandrx(proc)
 
     @bytesreceived = @new1[0].to_i - @new0[0].to_i
     @bitsreceived = (@bytesreceived * 8)
@@ -223,10 +231,10 @@ module Usagewatch
   end
 
   # Bandwidth Transmitted Method
-  def self.bandtx
+  def self.bandtx(proc: "/proc")
 
-    if File.exists?("/proc/net/dev")
-      File.open("/proc/net/dev", "r") do |file|
+    if File.exists?("#{proc}/net/dev")
+      File.open("#{proc}/net/dev", "r") do |file|
         @result = file.read
       end
     end
@@ -266,11 +274,11 @@ module Usagewatch
   end
 
   # Current Bandwidth Transmitted in Mbit/s
-  def self.uw_bandtx
+  def self.uw_bandtx(proc: "/proc")
 
-    @new0 = self.bandtx
+    @new0 = self.bandtx(proc)
     sleep 1
-    @new1 = self.bandtx
+    @new1 = self.bandtx(proc)
 
     @bytestransmitted = @new1[1].to_i - @new0[1].to_i
     @bitstransmitted = (@bytestransmitted * 8)
@@ -278,10 +286,10 @@ module Usagewatch
   end
 
   # Disk Usage Method
-  def self.diskio
+  def self.diskio(proc: "/proc")
 
-    if File.exists?("/proc/diskstats")
-      File.open("/proc/diskstats", "r") do |file|
+    if File.exists?("#{proc}/diskstats")
+      File.open("#{proc}/diskstats", "r") do |file|
         @result = file.read
       end
     end
@@ -319,21 +327,21 @@ module Usagewatch
   end
 
   # Current Disk Reads Completed
-  def self.uw_diskioreads
+  def self.uw_diskioreads(proc: "/proc")
 
-    @new0 = self.diskio
+    @new0 = self.diskio(proc)
     sleep 1
-    @new1 = self.diskio
+    @new1 = self.diskio(proc)
 
     @diskreads = @new1[0].to_i - @new0[0].to_i
   end
 
   # Current Disk Writes Completed
-  def self.uw_diskiowrites
+  def self.uw_diskiowrites(proc: "/proc")
 
-    @new0 = self.diskio
+    @new0 = self.diskio(proc)
     sleep 1
-    @new1 = self.diskio
+    @new1 = self.diskio(proc)
 
     @diskwrites = @new1[1].to_i - @new0[1].to_i
   end
